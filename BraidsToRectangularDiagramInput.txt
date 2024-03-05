@@ -1,0 +1,94 @@
+def braid_to_positive_braid(W):
+    #Input is an array [1 -2 3 5 -1 -2] etc.
+    #Output is a positive braid.  This could be adjusted to output just the positive array! 
+    n=max(abs(i)+1 for i in W) #This is the braid group
+    L=list(range(1,n)) #This will be used to generate the positive replacementwords
+    positivewordreplacement=[]
+    for j in range(1,n):
+        positivewordreplacement.append(L[j-(n+1)::-1]+L+L[:j-1:-1]) #This array holds in each index the replacement positive word
+        PositiveW=[];
+    for i in W:
+        if i>0:
+            PositiveW.append(i)
+        else:
+             PositiveW.append(positivewordreplacement[i])
+    PositiveW=flatten(PositiveW) #This is the positive braid word replacing the input W  
+    Braidgroup=BraidGroup(n); #The generators are s_0-s_(n-2) I would like to change this to numbers but I dont know how yet.
+    PositiveBraidW=Braidgroup(PositiveW)
+    return PositiveBraidW
+
+
+#Here are a few examples: 
+MortonPositive=braid_to_positive_braid([-4,-4,2,1,6,7,3,-4,5,4,4,4,-3,4,1,6,2])
+GoeritzUnknot=braid_to_positive_braid([-2,-2,1,1,-3,-3,2,2,2])
+MortonPositive
+GoeritzUnknot
+
+GoeritzUnknot=braid_to_positive_braid([-2,-2,1,1,-3,-3,2,2,2]);
+GoeritzUnknotNormalform=GoeritzUnknot.left_normal_form()
+GoeritzUnknotNormalform
+
+#Then you can put it into left normal form or right normal form by doing the following:
+print("This is left greedy normal form: ",MortonPositive.left_normal_form())
+print("This is right greedy normal form: ",MortonPositive.right_normal_form())
+
+def left_normal_to_string(leftnormbraid,n_from_braidgroup):
+    #This will take a left normal braid, removes the garside elements and turns it back into a string 
+    
+   
+    A=str(flatten(leftnormbraid))
+    if A[1]=='1':                              #If there is not a garside element it puts a 1 there. This removes it. 
+        A=A[4:-1]
+    elif A.find('^') != -1:                    #This will remove the garside elements. We will have to duplicate the string however many times                                                 and append to the beginning.  For now it wont do that.
+        A=A[A.find('^')+4:]
+    else:
+        A=A[2:-1]                             #This will remove the [ ] and just leave the braid word
+    A=A.replace("*",',').replace(' ','')
+    A=A[::-3]                                # This is me being sneaky, I grab only the numbers in reverse order, then flip back
+    A=A[::-1]                                
+    B=list(map(int, str(A)))                 #This is now in string format again.
+    B = [x+1 for x in B]  #this changes it from 0-(n-2) to (1-n-1) like it should be! 
+
+    return B
+    
+B=left_normal_to_string(MortonPositive.left_normal_form(),6)
+B
+
+#This will partition the string into non-decreasing parts. The commented out part will also partition it into non-decreasing and also decreasing parts (there is a slight issue with parts of the braid word like 121 )
+
+#def syllable_string_partitioning(B): 
+#    syllable=[]
+#    syllables=[]
+#    for i in range(len(B)-1):
+#        if (B[i]+1 == B[(i+1)] or B[i]-1==B[(i+1)]):
+#            syllable.append(B[i])
+#        else:
+#            syllable.append(B[i])
+#            syllables.append(syllable)
+#            syllable=[]
+#    return syllables
+#################################################################################################
+#If you want only increasing syllables you can run this one. 
+def syllable_string_partitioning(B): 
+    syllable=[]
+    syllables=[]
+    for i in range(len(B)-1):
+        if (B[i]+1 == B[(i+1)]):
+            syllable.append(B[i])
+        else:
+            syllable.append(B[i])
+            syllables.append(syllable)
+            syllable=[]
+    return syllables
+
+#This will partition into increasing strings.  You can change it to decreasing and increasing strings too by changing the commented out section
+D=syllable_string_partitioning(B) 
+
+#Greg this is how I think you want it formatted. 
+Inputforrectangulardiagram=[[D[i][0],D[i][-1]] for i in range(len(D))]
+Inputforrectangulardiagram
+
+# We can right now calculate the Jones polynomial of the braid closure.  I have not gone into calculating the Jones Polynomial for the plat closure of the braid word. But here the jones polynomial of the braid closure of the positive morton unknot! 
+
+MortonPositive=braid_to_positive_braid([-4,-4,2,1,6,7,3,-4,5,4,4,4,-3,4,1,6,2])
+MortonPositive.jones_polynomial()

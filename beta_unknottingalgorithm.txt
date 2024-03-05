@@ -1,0 +1,48 @@
+def unknotting_algorithm(braidword,bailout):
+################ INITIALIZATION #########################
+    failsafe=0;
+    V=[1]
+    E=[1]
+    previous_V=[0]
+    previous_E=[0]
+    n=max(abs(i)+1 for i in braidword)
+    previous_complexity=n*len(braidword) #This is biggg upperbound for complexity and is initialized just to pass through the while loop the first time
+
+    complexity=n*len(braidword) #Again the same idea it enters the while loop with this and is updated after first pass. 
+################################################################################
+# START OF WHILE LOOP
+    while (complexity>2 and failsafe<bailout):
+        n=max(abs(i)+1 for i in braidword) #This is the braid group it may change throught                                               the iterations
+        
+################## STEP 1 ####################################
+        positive_braidword=braid_to_positive_braid(braidword)
+        leftnorm_positive_braidword=positive_braidword.left_normal_form()
+        #rightnorm_positive_braidword=positive_braidword.right_normal_form() 
+        # We will eventually need this to put it into "bottom normal form"
+        leftnorm_positive_braidword_str=left_normal_to_string(leftnorm_positive_braidword,n)
+                                      #rightnorm_positive_braidword_str=right_normal_to_string(rightnorm_positive_braidword,n)   #This function not written yet but can be made quickly from function above. 
+        syllables=syllable_string_partitioning(leftnorm_positive_braidword_str)
+        RectangularDiagram_input=[[syllables[i][0],syllables[i][-1]] for i in range(len(syllables))]
+
+        #################### STEP 2 #################################################
+        [V,E]=plat2rectdiag(RectangularDiagram_input)   
+        
+        #ISSUE: The output printed is the vertex set and the red edges   #Right now everytime this is done it overwrites the previous file.  Somewhere in this code we need to send the file to a folder and save it with a name that changes on each iteration.  That can be done but I dont know how
+        
+        previous_V=V
+        previous_E=E
+        complexity=len(V)
+        if complexity>previous_complexity: 
+            failsafe=bailout
+            print('You have increased your complexity! Something really bad happened')
+        else:
+            drawrectdiag(V, E)  #This will give a tikzpicture for the rectangular diagram! 
+            [updated_V,updated_E]=destabilization_RectangularDiagram[V,E] #Waiting for greg for this one
+            previous_complexity=len(V)
+            complexity_updated=len(updated_V)
+            if complexity_updated==2: 
+                failsafe=bailout
+                print('Congratulations you simplified your unknot!')
+            else:
+                newsyllables=PlatPosRDtoPlat(updated_V,updated_E)#Waiting for greg for this one
+                braidword=flatten([list(range(newsyllables[i][0],newsyllables[i][1]+1)) for i in range(len(newsyllables))]) #This turns it back into a readable braid word for the top of the while loop
