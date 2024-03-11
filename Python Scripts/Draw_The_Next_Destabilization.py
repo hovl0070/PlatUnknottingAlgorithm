@@ -1,9 +1,42 @@
-def drawrectdiag(vertexset, rededges):
+def drawrectdiag(vertexset, rededges, listofthreevertices):
     import numpy as np
     print("\\begin{figure}")
     print("\\centering")
     print("\\resizebox{\columnwidth}{!}{")
     print("\\begin{tikzpicture}")
+
+    x1 = listofthreevertices[0][0]
+    x2 = listofthreevertices[1][0]
+    x3 = listofthreevertices[2][0]
+
+    y1 = listofthreevertices[0][1]
+    y2 = listofthreevertices[1][1]
+    y3 = listofthreevertices[2][1]
+
+    if x1 == x2:
+        newx = x3
+        oldx = x1
+    elif x1 == x3:
+        newx = x2
+        oldx = x1
+    elif x2 == x3:
+        newx = x1
+        oldx = x2
+    else:
+        return 'Not a valid destabilization'
+
+    if y1 == y2:
+        newy = y3
+        oldy = y1
+    elif y1 == y3:
+        newy = y2
+        oldy = y1
+    elif y2 == y3:
+        newy = y1
+        oldy = y2
+    else:
+        return 'Not a valid destabilization'
+
     vsy = [j for i, j in vertexset]
     miny: int = min(vsy)
     vsyarray = np.array(vsy)
@@ -29,6 +62,8 @@ def drawrectdiag(vertexset, rededges):
 
     print('')
     print('')
+
+    print("\\filldraw[red, opacity = 0.5] (", oldx, ", ", oldy, ") rectangle (", newx, ", ", newy, ");")
 
     # Next, we draw a small circle around each vertex, and draw red ones on red edges
     for v in vertexset:

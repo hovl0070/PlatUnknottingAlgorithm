@@ -1,4 +1,4 @@
-def performADestabilization(listofthreevertices, vertexset):
+def performADestabilization(listofthreevertices, vertexset, rededges):
     x1 = listofthreevertices[0][0]
     x2 = listofthreevertices[1][0]
     x3 = listofthreevertices[2][0]
@@ -31,12 +31,40 @@ def performADestabilization(listofthreevertices, vertexset):
     else:
         return 'Not a valid destabilization'
 
-    vertexset.append((newx,newy))
-    vertexset.remove((oldx,oldy))
+
+    vertexset.append((newx, newy))
+    vertexset.remove((oldx, oldy))
     vertexset.remove((oldx, newy))
     vertexset.remove((newx, oldy))
 
-    vertexset = [(i - 1, j) for i, j in vertexset if i > oldx]
-    vertexset = [(i, j + 1) for i, j in vertexset if j < oldy]
+    vsx = [i for (i, j) in vertexset]
+    vsy = [j for (i, j) in vertexset]
+    newvsx = []
+    for i in vsx:
+        if i > oldx:
+            i -=1
+        newvsx.append(i)
 
-    return vertexset
+    newvsy = []
+    for j in vsy:
+        if j < oldy:
+            j += 1
+        newvsy.append(j)
+
+    newvs = list(zip(newvsx, newvsy))
+
+
+
+    rededges.remove(oldx)
+    rededges.append(newx)
+    newrededges = []
+    for x in rededges:
+        if x < oldx:
+            newrededges.append(x)
+        else:
+            x = x - 1
+            newrededges.append(x)
+
+    newrededges.sort()
+
+    return [newvs, newrededges]
