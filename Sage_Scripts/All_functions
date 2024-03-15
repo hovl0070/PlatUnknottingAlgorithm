@@ -1,0 +1,642 @@
+#Required Functions
+###################################################################
+def braid_to_positive_braid(W):
+    #Input is an array [1 -2 3 5 -1 -2] etc.
+    #Output is a positive braid.  This could be adjusted to output just the positive array!
+    n=max(abs(i)+1 for i in W) #This is the braid group
+    L=list(range(1,n)) #This will be used to generate the positive replacementwords
+    positivewordreplacement=[]
+    for j in range(1,n):
+        positivewordreplacement.append(L[j-(n+1)::-1]+L+L[:j-1:-1]) #This array holds in each index the replacement positive word
+        PositiveW=[];
+    for i in W:
+        if i>0:
+            PositiveW.append(i)
+        else:
+             PositiveW.append(positivewordreplacement[i])
+    PositiveW=flatten(PositiveW) #This is the positive braid word replacing the input W
+    Braidgroup=BraidGroup(n,'s'); #The generators are s_0-s_(n-2) I would like to change this to numbers but I dont know how yet.
+    PositiveBraidW=Braidgroup(PositiveW)
+    return PositiveBraidW
+#############################################################################
+def left_normal_to_string(leftnormbraid,n_from_braidgroup):
+    #This will take a left normal braid, removes the garside elements and turns it back into a string
+
+
+    A=str(flatten(leftnormbraid))
+    if A[1]=='1':                              #If there is not a garside element it puts a 1 there. This removes it.
+        A=A[4:-1]
+    elif A.find('^') != -1:                    #This will remove the garside elements. We will have to duplicate the string however many times                                                 and append to the beginning.  For now it wont do that.
+        A=A[A.find('^')+4:-1]
+    else:
+        A=A[2:-1]                             #This will remove the [ ] and just leave the braid word
+    A=A.replace("*",',').replace(' ','')
+    A=A[::-3]                                # This is me being sneaky, I grab only the numbers in reverse order, then flip back
+    A=A[::-1]
+    #print('This is the positive left normal form combed', A)                             # REMOVE THIS LATER!
+    B=list(map(int, str(A)))                 #This is now in string format again.
+    B = [x+1 for x in B]  #this changes it from 0-(n-2) to (1-n-1) like it should be!
+
+    return B
+#####################################################################################
+
+#This will partition the string into non-decreasing parts. The commented out part will also partition it into non-decreasing and also decreasing parts (there is a slight issue with parts of the braid word like 121 )
+
+#def syllable_string_partitioning(B):
+#    syllable=[]
+#    syllables=[]
+#    for i in range(len(B)-1):
+#        if (B[i]+1 == B[(i+1)] or B[i]-1==B[(i+1)]):
+#            syllable.append(B[i])
+#        else:
+#            syllable.append(B[i])
+#            syllables.append(syllable)
+#            syllable=[]
+#    return syllables
+#################################################################################################
+#If you want only increasing syllables you can run this one.
+def syllable_string_partitioning(B):
+    syllable=[]
+    syllables=[]
+    for i in range(len(B)-1):
+        if (B[i]+1 == B[(i+1)]):
+            syllable.append(B[i])
+        else:
+            syllable.append(B[i])
+            syllables.append(syllable)
+            syllable=[]
+    if B[len(B)-1]-1==B[len(B)-1]:
+        syllable.append( B[len(B)])
+    else: syllables.append([B[len(B)-1]])
+    return syllables
+##############################################################################
+def plat2rectdiag(syllablelist):
+    # This is figuring out what braid group we're in by looking at the max crossing number. In a larger program this can be done sooner, and eliminated from this program.
+    syllableends = [j for i, j in syllablelist]
+    maxcrossing: int = max(syllableends)
+    if maxcrossing % 2 == 1:
+        n = (maxcrossing + 1) / 2
+    else:
+        n = (maxcrossing + 2) / 2
+    n = int(n)
+
+    # This is initializing the rectangular diagram: strands are initially in the first 2n positions, and each bridge starts on the next column.
+    strands = list(range(1, (2 * n) + 1))
+    vertexset = []
+    i = 1
+    while i <= n:
+        vertexset.append((i, 2 * i - 1))
+        vertexset.append((i, 2 * i))
+        i += 1
+
+
+    # For each syllable, we add two new vertices to the vertexset and update where each strand is
+    # print(strands)
+    k=1
+    while syllablelist:
+        # print('step ', k)
+        currentsyllable = syllablelist[0]
+        newvertextop = (n + k, strands[currentsyllable[0] - 1])
+        newvertexbot = (n + k, strands[currentsyllable[1]] + 1)
+        vsx = [i for i, j in vertexset]
+        vsy = [j for i, j in vertexset]
+        shiftedindices = list(filter(lambda x: vsy[x] >= strands[currentsyllable[1]] + 1, range(len(vsy))))
+        for i in shiftedindices:
+            vsy[i] = vsy[i] + 1
+        vertexset = list(zip(vsx, vsy))
+        vertexset = vertexset + [newvertextop, newvertexbot]
+        # print(vertexset)
+
+        # Now we need to update where the strands are. It's an annoying list manipulation, but nothing complicated.
+        strands.insert(currentsyllable[1], strands[currentsyllable[1]])
+        strandchange = list(range(currentsyllable[1] + 1, len(strands)))
+        for i in strandchange:
+            strands[i] += 1
+        strands.pop(currentsyllable[0] - 1)
+        # print(strands)
+        syllablelist.pop(0)
+        k += 1
+    # print('end of for loop')
+    # print('k = ',1)
+    # print(strands)
+
+    # Now we need to close off the plat where strands 1&2 are, 3&4 are, etc.
+    for i in range(1, n + 1):
+        vertexset.append((n+ k + i - 1, strands[2 * i - 2]))
+        vertexset.append((n + k + i - 1, strands[2 * i - 1]))
+
+    # Lastly, we'll make our vertex set go in the negative y direction, it'll make our pictures look how we want them to.
+    vsx = [i for i, j in vertexset]
+    vsy = [j for i, j in vertexset]
+    negvsy = [-x for x in vsy]
+    vertexset = list(zip(vsx, negvsy))
+
+    # Here we can initialize where our red edges are, indicating only what x values they're at. This can be changed depending on our needs.
+    rededges = list(range(1, n + 1)) + list(range(n + k , (2 * n) + k ))
+
+
+    #print(vertexset)
+    #print(rededges)   #You can uncomment these if you want!
+
+    return [vertexset,rededges]
+
+##############################################################################################
+def drawrectdiag(vertexset, rededges,iteration):
+#### This will save the tikzfile to your computer as a .txt file
+    import numpy as np
+    import sys
+    sys.stdout = open('RectangularDiagramtizkfile.txt','a')
+    print('This is the diagram from iteration: ',iteration )
+    print("\\begin{tikzpicture}")
+    # First, we draw the horizontal lines remembering that our y's are negative
+    vsy = [j for i, j in vertexset]
+    miny: int = min(vsy)
+    vsyarray = np.array(vsy)
+    for i in range(miny, 0):
+        currentvertices = np.where(vsyarray == i)[0]
+        vertex1 = vertexset[currentvertices[0]]
+        vertex2 = vertexset[currentvertices[1]]
+        print("\\draw[black, very thick] ", vertex1, ' -- ', vertex2, ';')
+
+    print('')
+    print('')
+
+    # Next, we need to draw the white rectangles because we don't want to figure out how to use the knots package in tikz.
+    vsx = [i for i, j in vertexset]
+    maxx: int = max(vsx)
+    vsxarray = np.array(vsx)
+    for i in range(1, maxx + 1):
+        currentvertices = np.where(vsxarray == i)[0]
+        vertex1 = vertexset[currentvertices[0]]
+        vertex2 = vertexset[currentvertices[1]]
+        realv1 = (vertex1[0] - .05, vertex1[1] - .25)
+        realv2 = (vertex2[0] + .05, vertex2[1] + .25)
+        print("\\filldraw[white, very thick] ", realv1, ' rectangle ', realv2, ';')
+
+    print('')
+    print('')
+
+    # Next, we draw a small circle around each vertex, and draw red ones on red edges
+    for i in vertexset:
+        if i[0] in rededges:
+            print("\\filldraw[red] ", i, ' circle (1.5pt) node[anchor=west]{};')
+        else:
+            print("\\filldraw[black] ", i, ' circle (1.5pt) node[anchor=west]{};')
+
+    print('')
+    print('')
+
+    # Lastly, we draw the vertical lines, where we need to check for redness.
+    for i in range(1, maxx + 1):
+        currentvertices = np.where(vsxarray == i)[0]
+        vertex1 = vertexset[currentvertices[0]]
+        vertex2 = vertexset[currentvertices[1]]
+        if i in rededges:
+            print("\\draw[red, very thick] ", vertex1, ' -- ', vertex2, ';')
+        else:
+            print("\\draw[black, very thick] ", vertex1, ' -- ', vertex2, ';')
+
+    print('\\end{tikzpicture}')
+
+#########################################################################################
+
+def Destabilization_Step(vertexset, rededges):
+
+    def Check_for_Destabilization(x, vertexset):
+        # Vertex set and red edges just describe a rectangular diagram.
+        # x is the x-value that we need to check if there's a destabilization.
+        import numpy as np
+        vsx = [i for i, j in vertexset]
+        vsxarray = np.array(vsx)
+        vsy = [j for i, j in vertexset]
+        vsyarray = np.array(vsy)
+
+        # This is figuring out the corners of the red edge at point x
+        redindices = np.where(vsxarray == x)[0]
+        y1 = vertexset[redindices[0]][1]
+        y2 = vertexset[redindices[1]][1]
+
+        ####CHECK HERE FOR AN ISSUE!#######  CAN REINDICES BE EMPTY?
+
+        # Now we need to find the x values for the vertices that are at y1 and y1.
+        y1index = np.where(vsyarray == y1)[0]
+        x11 = vertexset[y1index[0]][0]
+        x12 = vertexset[y1index[1]][0]
+        adjx1 = [x11, x12]
+        adjx1.remove(x)
+        adjx1 = adjx1[0]
+
+        y2index = np.where(vsyarray == y2)[0]
+        x21 = vertexset[y2index[0]][0]
+        x22 = vertexset[y2index[1]][0]
+        adjx2 = [x21, x22]
+        adjx2.remove(x)
+        adjx2 = adjx2[0]
+
+        # This code handles both left and right red edges by using the max/min stuff for top/bottom and left/right
+        # Now, we check for a destabilization along the x vertical edge and along the horizontal edge at height y1
+        for testx in [adjx1, adjx2]:
+            # print('forloop')
+            isempty = 1
+            topedge = max(y1, y2)
+            bottomedge = min(y1, y2)
+            leftedge = min(x, testx)
+            rightedge = max(x, testx)
+
+            checkedys = [-2, -4]
+            for y in range(bottomedge + 1, topedge):
+                # print('forloop2')
+                if y in checkedys:
+                    # print('skip')
+                    continue
+                yindex = np.where(vsyarray == y)[0]
+                x1 = vertexset[yindex[0]][0]
+                x2 = vertexset[yindex[1]][0]
+                leftx = min(x1, x2)
+                rightx = max(x1, x2)
+                if leftx > rightedge:  # fully to the right of the bypassing disc
+                    isempty *= 1
+                    # print(1)
+                elif leftx < leftedge:
+                    if rightx < leftedge or rightx > rightedge:  # fully to the left or fully underneath the bp disc
+                        isempty *= 1
+                        # print(2)
+                    else:  # starts to the left and makes a turn inside the rectangle
+                        testpoint = (rightx, y)
+                        while testpoint[0] < rightedge and bottomedge < testpoint[1]:  # this is tracking where all the turns go
+                            tpxindex = np.where(vsxarray == testpoint[0])[0]
+                            tp1 = vertexset[tpxindex[0]]
+                            tp2 = vertexset[tpxindex[1]]
+                            if tp1 == testpoint:
+                                temptp = tp2
+                            else:
+                                temptp = tp1
+
+                            tpyindex = np.where(vsyarray == temptp[1])[0]
+                            tp1 = vertexset[tpyindex[0]]
+                            tp2 = vertexset[tpyindex[1]]
+                            if tp1 == temptp:
+                                testpoint = tp2
+                            else:
+                                testpoint = tp1
+                            checkedys.append(testpoint[1])  # this allows us to skip over small segments later on
+                            # print(3)
+                        if testpoint[
+                            0] < rightedge:  # x value below the right edge means y value above bottom edge => came out the bottom (bad)
+                            isempty *= 0
+                        elif testpoint[1] > bottomedge:  # y value above bottom edge means exited the right side (good)
+                            isempty *= 1
+                            # print(4)
+                        elif temptp[
+                            0] < rightedge:  # Now we need to use the previous vertex to see if it came out the side or the bottom.
+                            isempty *= 0
+                            # print(5)
+                        else:
+                            isempty *= 1
+                            # print(6)
+                elif rightx > rightedge:  # We're allowed to know that this strand came in from above because of the checkedys business.
+                    isempty *= 0
+                    # print(7)
+                else:  # the strand didn't immediately leave, so now we need to chase it down through the rectangle.
+                    testpoint = (rightx, y)
+                    while testpoint[0] < rightedge and bottomedge < testpoint[1]:
+                        tpxindex = np.where(vsxarray == testpoint[0])[0]
+                        tp1 = vertexset[tpxindex[0]]
+                        tp2 = vertexset[tpxindex[1]]
+                        if tp1 == testpoint:
+                            temptp = tp2
+                        else:
+                            temptp = tp1
+
+                        tpyindex = np.where(vsyarray == temptp[1])[0]
+                        tp1 = vertexset[tpyindex[0]]
+                        tp2 = vertexset[tpyindex[1]]
+                        if tp1 == temptp:
+                            testpoint = tp2
+                        else:
+                            testpoint = tp1
+                        # print(8)
+
+                    if testpoint[1] > bottomedge:
+                        isempty *= 0
+                        # print(9)
+                    elif testpoint[0] < rightedge:
+                        isempty *= 1
+                        # print(10)
+                    elif temptp[0] < rightedge:
+                        isempty *= 1
+                        # print(11)
+                    else:
+                        isempty *= 0
+                        # print(12)
+
+                # print("isempty = ", isempty)
+                # print("testx", testx)
+                # print()
+                if isempty == 0:  # if we've found a strand that stops a bypass at any point, the function is done.
+                    # print(13)
+                    continue
+                if testx == adjx1 and isempty == 1:
+                    return [(x, y1), (x, y2), (adjx1, y1)]
+                if testx == adjx2 and isempty == 1:
+                    return [(x, y1), (x, y2), (adjx2, y2)]
+
+        return 0
+
+    def performADestabilization(listofthreevertices, vertexset, rededges):
+        x1 = listofthreevertices[0][0]
+        x2 = listofthreevertices[1][0]
+        x3 = listofthreevertices[2][0]
+
+        y1 = listofthreevertices[0][1]
+        y2 = listofthreevertices[1][1]
+        y3 = listofthreevertices[2][1]
+
+        if x1 == x2:
+            newx = x3
+            oldx = x1
+        elif x1 == x3:
+            newx = x2
+            oldx = x1
+        elif x2 == x3:
+            newx = x1
+            oldx = x2
+        else:
+            return 'Not a valid destabilization'
+
+        if y1 == y2:
+            newy = y3
+            oldy = y1
+        elif y1 == y3:
+            newy = y2
+            oldy = y1
+        elif y2 == y3:
+            newy = y1
+            oldy = y2
+        else:
+            return 'Not a valid destabilization'
+
+        vertexset.append((newx, newy))
+        vertexset.remove((oldx, oldy))
+        vertexset.remove((oldx, newy))
+        vertexset.remove((newx, oldy))
+
+        vertexset = [(i - 1, j) for i, j in vertexset if i > oldx]
+        vertexset = [(i, j + 1) for i, j in vertexset if j < oldy]
+
+        rededges.remove(oldx)
+        if oldx > newx:
+            rededges.append(newx) #Everything should be shifted
+        else:
+            rededges.append(oldx - 1)
+        rededges.sort()
+
+        return [vertexset, rededges]
+
+
+    isthereadestab = 1
+
+    while isthereadestab == 1:
+        for x in rededges:
+            ans = Check_for_Destabilization(x, vertexset)
+            if ans == 0:
+                isthereadestab = 0
+            else:
+                newdiag = performADestabilization(ans, vertexset, rededges)
+                isthereadestab = 1
+                vertexset = newdiag[0]
+                rededges = newdiag[1]
+                break
+
+    return [vertexset, rededges]
+
+
+################################################################################################
+def rdtoplatposrd(vertexset, rededges):
+    import numpy as np
+
+    # Figuring out how many bridges we have
+    n = len(rededges) / 2
+    n = int(n)
+
+    # Some initialization
+    leftrededges = rededges[: n]
+    rightrededges = rededges[n:]
+    redvertices = []
+
+# Notice that I'm using the assumption that all top bridges are above all bottom bridges. If we want to make this
+# program more robust, we can definitely find a way to detect if the given red vertex is a left or right edge, and
+# and sort like that. For the hard coded example I just brute forced it for simplicity. only lines 11-15 would need
+# change to accomodate this.
+
+
+# First, we do the left side, find the tops of each red edge:
+    for m in leftrededges:
+        vsx = [i for i, j in vertexset]
+        vsxarray = np.array(vsx)
+        currentvertices = np.where(vsxarray == m)[0]
+        y1 = vertexset[currentvertices[0]][1]
+        y2 = vertexset[currentvertices[1]][1]
+        y = max(y1, y2)
+        redvertices.append((m, y))
+
+
+# Next, we need to find the minimum y value and add in 3 vertices, and update our left vertex list
+# rvy is the red vertex y values.
+    rvy = [j for i, j in redvertices]
+    while rvy:
+        # This part figures out which vertex we're changing. On a left edge we start with the lowest one, on a right
+        # edge we start with the highest one.
+        y = min(rvy)
+        currentvertex = [(i, j) for (i, j) in redvertices if j == y]
+        x = currentvertex[0][0]
+
+        # Here we're removing the current vertex, and then making room for the new vertices that we're about to add.
+        vertexset = [(i, j) for (i, j) in vertexset if (i, j) != (x, y)]
+        vertexset = [(i + 1, j - 1) if j < y else (i + 1, j) for (i, j) in vertexset]
+
+        # This is adding in the new vertices. Since we shift once, we can always add it to the first column.
+        vertexset.append((1, y))
+        vertexset.append((1, y - 1))
+        vertexset.append((x + 1, y - 1))
+
+        # Now, since we did a while loop we need to update rvy, and also our red vertices changes bc they got shifted
+        # over. By processing the bottom vertex first, the y values of all the vertices above it don't change.
+        rvy.remove(y)
+        leftrededges.remove(x)
+        leftrededges = [i + 1 for i in leftrededges]
+        redvertices = [(i + 1, j) for (i, j) in redvertices if i + 1 in leftrededges]
+        rightrededges = [i + 1 for i in rightrededges]
+
+# Now, we do almost the same for the right vertices.
+
+    # This is the same initialization as above, we just need to figure out which vertices we're using on the right side.
+    for m in rightrededges:
+        vsx = [i for i, j in vertexset]
+        vsxarray = np.array(vsx)
+        currentvertices = np.where(vsxarray == m)[0]
+        y1 = vertexset[currentvertices[0]][1]
+        y2 = vertexset[currentvertices[1]][1]
+        y = min(y1, y2)
+        redvertices.append((m, y))
+
+    # Since we're adding things to the end of the diagram, we want to figure out where our diagram ends. That's c.
+    c = max(vsx)
+
+    # Updating rvy for red edges
+    rvy = [j for i, j in redvertices]
+
+    while rvy:
+        c += 1
+        # We need to start with the highest vertex on the right, same way as above.
+        y = max(rvy)
+        currentvertex = [(i, j) for (i, j) in redvertices if j == y]
+        x = currentvertex[0][0]
+
+        # Again we need to delete the correct vertex, shift everything down, and add in the correct new ones.
+        vertexset = [(i, j) for (i, j) in vertexset if (i, j) != (x, y)]
+        vertexset = [(i, j - 1) if j <= y else (i, j) for (i, j) in vertexset]
+        vertexset.append((c, y))
+        vertexset.append((c, y - 1))
+        vertexset.append((x, y))
+
+        # Again, updating our set of y values and updating the coordinates of our old list (they all move down by one)
+        rvy.remove(y)
+        rightrededges.remove(x)
+        redvertices = [(i, j - 1) for (i, j) in redvertices if i in rightrededges]
+        rvy = [j for i, j in redvertices]
+
+    leftrededges = list(range(1, n + 1))
+    rightrededges = list(range(c - n + 1, c + 1))
+    rededges = leftrededges + rightrededges
+
+    #print('vertexset = ', vertexset)
+    #print('rededges = ', rededges)
+    return[vertexset,rededges]
+################################################################################################################
+
+
+
+def PlatPosRDtoPlat(vertexset,rededges):
+    import numpy as np
+    # Counting the number of bridges
+    n = len(rededges) / 2
+    #n = int(n)
+    leftrededges = rededges[: n]
+    syllablelist = []
+    vertexset = matrix(vertexset)
+    vsx = [i for i, j in vertexset]
+    #vsxarray = np.array(vsx)
+    vsy = [j for i, j in vertexset]
+    #vsyarray = np.array(vsy)
+    strands = []
+
+
+    # Figuring out where the strands start.
+    # Each red edge is a bridge, which gives the initial location of each strand.
+    for m in leftrededges:
+        currentstrands=[i for i in range(len(vsx)) if vsx[i]==m] #replacing line below
+        #currentstrands = np.where(vsxarray == m)[0]
+        topstrand = vertexset[currentstrands[0]][1]
+        bottomstrand = vertexset[currentstrands[1]][1]
+        strands.append(topstrand)
+        strands.append(bottomstrand)
+
+
+    c = max(vsx)
+    #strandarray = np.array(strands)
+
+    for i in range(n + 1, c - n + 1):
+        cs = 0
+        currentstrands=[j for j in range(len(vsx)) if vsx[j]==i] #replacing line below
+        #currentstrands = np.where(vsxarray == i)[0]
+        y1 = vertexset[currentstrands[0]]
+        y2 = vertexset[currentstrands[1]]
+        startingstrand = max(y1, y2)
+        endingstrand = min(y1, y2)
+        startingstrandindex=[k for k in range(len(strands)) if strands[k]==startingstrand]
+        #replacing line below
+        #startingstrandindex = np.where(strandarray == startingstrand)[0]
+        if startingstrandindex ==[]: return syllablelist
+        else:
+            startingstrandindex = startingstrandindex[0]
+            crossingstrands=[l for l in range(len(strands)) if (strands[l]<startingstrand and             strands[l]>endingstrand)]
+                    #crossingstrands = np.where((strandarray < startingstrand) & (strandarray >                   endingstrand))[0]
+            if len(crossingstrands) > 0:
+                for s in strandarray:
+                    understrands = np.where(vsyarray == s)[0]
+                    edge1 = vertexset[understrands[0]][1]
+                    edge2 = vertexset[understrands[1]][1]
+                    leftedge = min(edge1, edge2)
+                    rightedge = max(edge1, edge2)
+                    if leftedge < i < rightedge:
+                        cs = cs+1
+            currentsyllable = [startingstrandindex[0]+1,startingstrandindex[0]+cs+1]
+            syllablelist.append(currentsyllable)
+            np.delete(strands, startingstrand)
+            np.append(strands, endingstrand)
+            strands[::-1].sort()
+            return syllablelist
+
+####################################################################################################################################################
+
+
+
+###NOTE THIS IS JUST A PROTOTYPE OF WHAT WE EVENTUALLY WANT TO DO! DON'T RUN IT YET!
+
+def unknotting_algorithm(braidword,bailout):
+################ INITIALIZATION #########################
+    failsafe=0;
+    V=[1]
+    E=[1]
+    previous_V=[0]
+    previous_E=[0]
+    n=max(abs(i)+1 for i in braidword)
+    previous_complexity=n*len(braidword)/2 #This is big upperbound for complexity and is initialized just to pass through the while loop the first time
+    iterationfortikz=1
+    complexity=n*len(braidword)/2 #Again the same idea it enters the while loop with this and is updated after first pass.
+################################################################################
+# START OF WHILE LOOP
+    while (complexity>2 and failsafe<bailout):
+        n=max(abs(i)+1 for i in braidword) #This is the braid group it may change throught                                               the iterations
+
+################## STEP 1 ####################################
+        positive_braidword=braid_to_positive_braid(braidword)
+        leftnorm_positive_braidword=positive_braidword.left_normal_form()
+        #rightnorm_positive_braidword=positive_braidword.right_normal_form()
+        # We will eventually need this to put it into "bottom normal form"
+        leftnorm_positive_braidword_str=left_normal_to_string(leftnorm_positive_braidword,n)
+                                      #rightnorm_positive_braidword_str=right_normal_to_string(rightnorm_positive_braidword,n)   #This function not written yet but can be made quickly from function above.
+        syllables=syllable_string_partitioning(leftnorm_positive_braidword_str)
+        RectangularDiagram_input=[[syllables[i][0],syllables[i][-1]] for i in range(len(syllables))]
+
+        #################### STEP 2 #################################################
+        [V,E]=plat2rectdiag(RectangularDiagram_input)
+        #drawrectdiag(V, E,iterationfortikz)
+
+        previous_V=V
+        previous_E=E
+        complexity=len(V)/2
+        if complexity>previous_complexity:
+            failsafe=bailout
+            drawrectdiag(V, E,iterationfortikz)
+            print('You have increased your complexity! Something really bad happened')
+        else:
+            drawrectdiag(V, E,iterationfortikz)  #This will give a tikzpicture for the rectangular diagram!
+            [updated_V,updated_E]=Destabilization_Step(V,E)
+            previous_complexity=len(V)/2
+            complexity_updated=len(updated_V)/2
+            if complexity_updated==2:
+                failsafe=bailout
+                drawrectdiag(V, E,iterationfortikz)
+                print('Congratulations you simplified your unknot!')
+            else:
+                [Vplatposition,Eplatposition]=rd_to_platposrd(updated_V,updated_E)
+                syllablelist=PlatPosRDtoPlat(vertexset,rededges)
+                braidword=flatten([list(range(syllablelist[i][0],syllablelist[i][1]+1)) for i                           in range(len(Vplatposition))]) #This turns it back into a readable braid word for the top of the while loop
+                iterationfortikz=iterationfortikz+1
+
+
+##########################################################################################################################################
+
+
